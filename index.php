@@ -91,8 +91,16 @@ if (\is_resource($running)) {
     exit(0);
 }
 
-$home = (string) (\getenv('HOME') ?: \sys_get_temp_dir());
-$configRoot = (string) (\getenv('XDG_CONFIG_HOME') ?: $home . '/.config');
+/*
+ * Where the reader's own files live.
+ *
+ * Windows has neither HOME nor XDG_CONFIG_HOME, and a build that fell through to the
+ * temp directory would keep settings and conversations somewhere that gets emptied —
+ * which is the same bug as losing them, only slower. USERPROFILE and APPDATA are the
+ * same two facts under the names that platform uses.
+ */
+$home = (string) (\getenv('HOME') ?: \getenv('USERPROFILE') ?: \sys_get_temp_dir());
+$configRoot = (string) (\getenv('XDG_CONFIG_HOME') ?: (\getenv('APPDATA') ?: $home . '/.config'));
 $configDirectory = $configRoot . '/quiesce';
 
 /* -------------------------------------------------------------------------
