@@ -760,6 +760,57 @@ tools/update.sh --check   --manifest=dist/update.json
 tools/update.sh --install --manifest=dist/update.json
 ```
 
+### Five ways to install it, and what was verified for each
+
+```bash
+tools/package.sh            # tarball and .deb, plus SHA256SUMS and update.json
+tools/package-rpm.sh        # an RPM, from the same staged tree
+tools/package-appimage.sh   # one file, double-clicked, nothing installed
+tools/package-windows.sh    # an NSIS installer, cross-built on Linux
+tools/package-macos.sh      # the macOS bundle (still never executed — no Mac here)
+```
+
+Measured on this machine, from one build:
+
+| artefact | size | how it was checked |
+| --- | --- | --- |
+| `quiesce_0.1.0_amd64.deb` | 8.0 MB | built by `dpkg-deb`, contents listed |
+| `quiesce-0.1.0-1.x86_64.rpm` | 5.9 MB | `rpm -qip` metadata and `rpm -qlp` contents |
+| `Quiesce-0.1.0-x86_64.AppImage` | 9.8 MB | `--appimage-extract` really produced `usr/bin/quiesce` |
+| `Quiesce-0.1.0-windows-x86_64-setup.exe` | 6.7 MB | `7z l` lists `quiesce.exe`, the DLL it links, and `tools/` |
+| `quiesce-0.1.0-linux-amd64.tar.gz` | 9.7 MB | extracted and installed into a clean prefix, then run |
+
+**The AppImage is assembled by hand, and the reason is worth recording.** `appimagetool` and
+`linuxdeploy` are both themselves AppImages, and an AppImage cannot run where FUSE is not
+permitted — which is exactly the case on a build machine with no `/dev/fuse` access. An
+AppImage is, though, only three things concatenated: a runtime, a squashfs image of an
+AppDir, and nothing else. So the script fetches the runtime once, builds the AppDir from the
+same layout `install-app.sh` uses, `mksquashfs`-es it, and `cat`s the two together. Its
+sha256 is **printed, not asserted**: the AppImage project publishes no manifest to assert it
+against, and inventing one would be worse than saying what came down the wire.
+
+**Windows is per-user on purpose.** It installs into `%LOCALAPPDATA%\Programs\Quiesce`,
+registers its uninstaller under `HKCU`, and asks for no administrator: a local-only
+application that demands to write to Program Files is asking for a permission it does not
+need. The uninstaller says out loud that settings, conversations, sessions and the image
+engine are left alone, because they live in `%APPDATA%` and not where the installer put
+them.
+
+**Three honest gaps, none of them hidden:**
+
+1. **The Windows installer has never been run**, because there is no Windows machine here. It
+   is built and its contents are listed, and that is all that can be said for it.
+2. **The RPM has never been installed on Fedora or RHEL**, for the same reason. Its
+   `Requires:` line is a best-effort mapping of the deb's `Depends:` — `webkitgtk6.0` and
+   `gtk4` are the Fedora names for the libraries the binary links.
+3. **`/create_image` on Windows will not work yet**: the engine's starter and installer are
+   POSIX shell scripts, and there is no `sh` on Windows to run them. The task loop, the chat,
+   documents, MCP, vision, sessions and jobs are all PHP and all fine.
+
+`index.php` also learned where a Windows reader's files live — `USERPROFILE` and `APPDATA`,
+having previously fallen through to the temp directory, which is the same bug as losing your
+settings, only slower.
+
 **Measured:** a 9.7 MB tarball and an 8.0 MB `.deb` (control metadata and file layout checked
 with `dpkg-deb`), and the tarball extracted and installed into a clean prefix really does run —
 `Quiesce 0.1.0 (PHP 8.4.13)`, and the startup trace shows it finding its own scripts there:
