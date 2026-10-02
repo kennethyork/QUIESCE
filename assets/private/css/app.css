@@ -160,17 +160,25 @@ body.panels-off .pane.side { display: none; }
     flex-wrap: wrap;
 }
 
-/* The panels button lives here, beside the other view buttons. Sized to the modes
-   group next to it rather than to a toolbar button, because that is what it is. */
+/*
+ * The panels button lives here, beside the view buttons rather than in the header.
+ *
+ * It has to *measure* like the group next to it or the row reads as two unrelated
+ * things: the modes group is 38px tall (3px of its own padding, a 30px button, and a
+ * 1px border), so this is 9px of padding around the same 18px line — 38px, to the
+ * pixel. Its "on" state is the one the active mode uses, a filled row rather than
+ * brighter text, because they are two toggles sitting next to each other and should
+ * say "on" the same way.
+ */
 .panels-toggle {
     display: inline-flex;
     align-items: center;
-    padding: 7px 14px;
+    padding: 9px 14px;
     font-size: 12px;
     color: var(--muted);
 }
 
-.panels-toggle[aria-pressed="true"] { color: var(--text); }
+.panels-toggle[aria-pressed="true"] { background: var(--panel-2); color: var(--text); }
 
 .field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 220px; }
 
@@ -200,9 +208,18 @@ textarea:focus {
     border-color: var(--accent);
 }
 
+/*
+ * A focus ring, quieter than it was.
+ *
+ * It sat next to the mode buttons as a solid 2px accent rectangle, which reads as
+ * *selected* rather than *focused* — the reader's screenshot of it looked like a broken
+ * button, and they were right to read it that way. The same ring at half strength, one
+ * pixel further out, still says "the keyboard is here" without claiming the button is on.
+ * Nothing is shown for a mouse: that is what `:focus-visible` is for.
+ */
 button:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 1px;
+    outline: 2px solid rgba(76, 141, 255, 0.45);
+    outline-offset: 2px;
 }
 
 /* Placeholders were inheriting the browser's light default, which is unreadable
