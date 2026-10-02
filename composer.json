@@ -1,0 +1,78 @@
+{
+    "$schema": "https://getcomposer.org/schema.json",
+    "name": "boson-php/app",
+    "type": "project",
+    "description": "The skeleton application for the Boson",
+    "keywords": [
+        "boson",
+        "boson-php",
+        "application",
+        "skeleton"
+    ],
+    "license": "MIT",
+    "require": {
+        "php": "^8.4",
+        "boson-php/http-static-provider": "^0.19",
+        "boson-php/runtime": "^0.19",
+        "boson-php/webview-ext-web-components": "^0.19"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src"
+        }
+    },
+    "require-dev": {
+        "boson-php/compiler": "^0.19",
+        "friendsofphp/php-cs-fixer": "^3.88",
+        "phpstan/phpstan": "^2.1",
+        "phpstan/phpstan-strict-rules": "^2.0",
+        "phpunit/phpunit": "^12.4",
+        "symfony/var-dumper": "^6.4|^7.0|^8.0"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "App\\Tests\\": "tests"
+        }
+    },
+    "scripts-aliases": {
+        "test:unit": [
+            "unit"
+        ],
+        "test:integration": [
+            "integration"
+        ],
+        "linter:check": [
+            "linter",
+            "stan"
+        ],
+        "phpcs:check": [
+            "phpcs",
+            "cs",
+            "psr",
+            "per"
+        ]
+    },
+    "scripts": {
+        "post-create-project-cmd": "boson init",
+        "compile": "boson compile",
+        "test": [
+            "@test:unit",
+            "@test:js",
+            "@test:feature"
+        ],
+        "test:unit": "phpunit --testsuite=unit --testdox",
+        "test:feature": "phpunit --testsuite=feature --testdox",
+        "test:integration": "phpunit --testsuite=integration --testdox",
+        "linter:check": "phpstan analyse --configuration phpstan.neon --memory-limit 256M",
+        "linter:baseline": "@linter:check --generate-baseline",
+        "phpcs:check": "@phpcs:fix --dry-run",
+        "phpcs:fix": "php-cs-fixer fix --config=.php-cs-fixer.php --allow-risky=yes --verbose --diff",
+        "test:js": "node tests/js/slash-commands.test.js"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

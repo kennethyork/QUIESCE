@@ -1,0 +1,16 @@
+# Built artefacts: the binary is 19 MB and reproducible from the source beside it.
+build/
+dist/
+
+# PHP dependencies: composer.lock is the source of truth, the tree is not.
+vendor/
+
+# Editor and tooling noise
+.phpunit.cache/
+.phpunit.result.cache
+*.swp
+.idea/
+.vscode/
+
+# The app's own runtime state never lives here, but a stray copy must not be committed.
+*.log

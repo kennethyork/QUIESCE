@@ -1,0 +1,60 @@
+{
+    "name": "quiesce",
+    "target": [
+        {
+            "type": "windows",
+            "arch": "amd64",
+            "ini": {
+                "opcache.enable": true,
+                "opcache.enable_cli": true
+            }
+        },
+        {
+            "type": "linux",
+            "arch": "amd64"
+        },
+        {
+            "type": "macos",
+            "arch": "amd64"
+        },
+        {
+            "type": "macos",
+            "arch": "arm64"
+        }
+    ],
+    "entrypoint": "index.php",
+    "output": "./build",
+    "extensions": [
+        "ctype",
+        "iconv"
+    ],
+    "mount": [
+        "assets/public"
+    ],
+    "build": {
+        "directories": [
+            "assets/private"
+        ],
+        "finder": [
+            {
+                "directory": "src",
+                "name": "*.php"
+            },
+            {
+                "directory": "vendor",
+                "not-directory": "vendor/boson-php/compiler",
+                "name": "*.php",
+                "not-name": [
+                    "*Test.php",
+                    "*TestCase.php",
+                    ".phpstorm.meta.php"
+                ]
+            }
+        ]
+    },
+    "ini": {
+        "memory_limit": "256M",
+        "opcache.enable": false,
+        "opcache.enable_cli": false
+    }
+}

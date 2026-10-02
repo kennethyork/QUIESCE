@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- No fonts, no CDNs, no analytics: every byte of this page ships inside the app. -->
+<title>Quiesce</title>
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+
+<header class="bar">
+    <div class="brand">
+        <span class="mark" aria-hidden="true">Q</span>
+        <div>
+            <h1>Quiesce</h1>
+            <p class="muted">local models only &mdash; nothing leaves this machine</p>
+        </div>
+    </div>
+    <div class="bar-status" id="status"></div>
+</header>
+
+<main>
+    <section class="pane">
+        <div class="toolbar">
+            <div class="modes" role="tablist">
+                <button type="button" id="mode-chat" aria-pressed="true">Chat</button>
+                <button type="button" id="mode-task" aria-pressed="false">Task</button>
+                <button type="button" id="mode-history" aria-pressed="false">History</button>
+            </div>
+            <!-- Beside the other view buttons rather than in the header, where it sat
+                 between the name and the status doing nothing on any window wide
+                 enough to show the panels anyway. -->
+            <button type="button" id="panels" class="panels-toggle" aria-pressed="true" title="show or hide the side panels">
+                Panels
+            </button>
+            <label class="field">
+                <span class="label">Model</span>
+                <select id="model"></select>
+            </label>
+            <button type="button" id="load">Load</button>
+            <button type="button" id="unload">Empty VRAM</button>
+        </div>
+
+        <!-- ---------------- chat ---------------- -->
+        <div class="view" id="view-chat">
+            <div class="transcript" id="transcript">
+                <p class="empty" id="empty">
+                    Pick a model, then ask it something. The answer arrives at the pace the
+                    profile allows, and every number that caused a pause is on the right.
+                </p>
+            </div>
+
+            <form class="composer" id="composer">
+                <textarea id="prompt" rows="3" placeholder="Ask the model something&hellip;  or /create_image a red cube on a table &lt;lora:pixel-art:0.8&gt;, /look chart.png what does this show?, /index"></textarea>
+                <div class="composer-actions">
+                    <button type="submit" id="send">Send</button>
+                    <button type="button" id="stop" disabled>Stop</button>
+                    <button type="button" id="attach">Attach&hellip;</button>
+                    <button type="button" id="detach" hidden>Detach</button>
+                    <button type="button" id="again">Ask again</button>
+                    <button type="button" id="editq">Edit last question</button>
+                    <button type="button" id="forget">New conversation</button>
+                    <span class="muted small" id="composer-note"></span>
+                </div>
+            </form>
+        </div>
+
+        <!-- ---------------- history ---------------- -->
+        <div class="view" id="view-history" hidden>
+            <div class="history-bar">
+                <span class="label">Recorded tasks</span>
+                <code id="sessions-path">&mdash;</code>
+                <button type="button" id="open-sessions">Open folder</button>
+            </div>
+            <div class="steps" id="sessions">
+                <p class="empty">Nothing recorded yet. Every task the agent runs is written here as one readable
+                    JSON file — the steps it took, the files it wrote, the answer, and the history needed to
+                    continue it later.</p>
+            </div>
+        </div>
+
+        <!-- ---------------- task ---------------- -->
+        <div class="view" id="view-task" hidden>
+            <div class="task-bar" id="task-bar" data-open="true">
+                <button type="button" id="task-toggle" class="task-head" aria-expanded="true">
+                    <span class="label">Task settings</span>
+                    <span class="task-summary" id="task-summary"></span>
+                    <span class="chev" id="task-chev">&#9662;</span>
+                </button>
+                <div class="task-rows" id="task-rows">
+                <div class="workspace-row">
+                    <span class="label">Working folder</span>
+                    <code id="workspace-path">none chosen</code>
+                    <button type="button" id="choose-workspace">Choose&hellip;</button>
+                    <button type="button" id="clear-workspace">Clear</button>
+                </div>
+                <div class="workspace-row">
+                    <span class="label">Web tools</span>
+                    <label class="switch">
+                        <input type="checkbox" id="web-toggle">
+                        <span>let the agent search and fetch</span>
+                    </label>
+                </div>
+                <div class="workspace-row">
+                    <span class="label">Commands</span>
+                    <label class="switch">
+                        <input type="checkbox" id="shell-toggle">
+                        <span>let the agent run commands in the folder</span>
+                    </label>
+                </div>
+                <p class="muted small" id="web-note"></p>
+                <p class="muted small" id="shell-note"></p>
+
+                <div class="workspace-row">
+                    <span class="label">Skills</span>
+                    <code id="skills-path">none yet</code>
+                    <button type="button" id="open-skills">Open folder</button>
+                </div>
+                <div class="workspace-row">
+                    <span class="label">Documents</span>
+                    <code id="documents-stat">&mdash;</code>
+                    <button type="button" id="index-documents">Index</button>
+                </div>
+                <div class="workspace-row">
+                    <span class="label">Fits</span>
+                    <code id="fit-stat">&mdash;</code>
+                </div>
+                <!-- The leash, in the reader's hands: the window this task gets, and how
+                     many generations it may take. The profile stays the ceiling and the
+                     note says so, rather than leaving the reader to discover that an agent
+                     with an 8k window forgets things. -->
+                <div class="workspace-row">
+                    <span class="label">Room</span>
+                    <select id="task-room" title="how much window a task may use; the profile is the ceiling">
+                        <option value="0">follow the profile</option>
+                        <option value="4096">4,096 tokens</option>
+                        <option value="8192">8,192 tokens</option>
+                        <option value="16384">16,384 tokens</option>
+                        <option value="32768">32,768 tokens</option>
+                    </select>
+                    <input type="number" id="task-steps" min="1" max="40" step="1" value="6"
+                           title="how many generations this task may take before it stops and answers">
+                    <span class="muted small">steps at most</span>
+                </div>
+                <p class="muted small" id="room-note"></p>
+                <div class="workspace-row">
+                    <span class="label">Undo</span>
+                    <code id="undo-stat">&mdash;</code>
+                    <button type="button" id="undo-write">Undo last write</button>
+                </div>
+                <div class="workspace-row">
+                    <span class="label">Vision</span>
+                    <code id="vision-stat">&mdash;</code>
+                </div>
+                <div class="workspace-row">
+                    <span class="label">Images</span>
+                    <code id="images-stat">&mdash;</code>
+                    <button type="button" id="image-install">Set up engine</button>
+                    <button type="button" id="image-serve">Start engine</button>
+                    <button type="button" id="image-stops" hidden>Stop engine</button>
+                    <button type="button" id="open-images">Folder</button>
+                </div>
+                <div class="workspace-row">
+                    <span class="label">LoRAs</span>
+                    <code id="lora-stat">&mdash;</code>
+                </div>
+                <div class="workspace-row">
+                    <span class="label">Draw at</span>
+                    <input type="number" id="image-steps" min="1" max="80" step="1" value="20" title="sampling steps — 1–4 for a turbo model, 20–30 for SD 1.5">
+                    <span class="muted small">steps</span>
+                    <input type="number" id="image-size" min="256" max="1024" step="64" value="512" title="pixels on the long side">
+                    <span class="muted small">px</span>
+                </div>
+                <div class="workspace-row">
+                    <span class="label">MCP</span>
+                    <code id="mcp-stat">&mdash;</code>
+                    <button type="button" id="open-mcp">Open config</button>
+                </div>
+                <p class="muted small" id="knowledge-note"></p>
+                </div>
+            </div>
+
+            <div class="steps" id="steps">
+                <p class="empty">No task yet. The agent works in steps you can watch: each tool it
+                    calls, what came back, and how long it took. Every step is one generation,
+                    so the governor paces the whole task.</p>
+            </div>
+
+            <div class="answer" id="answer" hidden></div>
+
+            <form class="composer" id="task-form">
+                <textarea id="task-input" rows="2" placeholder="Describe a task&hellip; or /create_image a red cube &lt;lora:name:0.8&gt;, /look chart.png, /index"></textarea>
+                <div class="composer-actions">
+                    <button type="submit" id="task-run">Run</button>
+                    <button type="button" id="task-stop" disabled>Stop</button>
+                    <button type="button" id="task-clear">Clear</button>
+                    <span class="muted small" id="task-note"></span>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <aside class="pane side">
+        <section class="card">
+            <h2>Quiet profile</h2>
+            <div class="profiles" id="profiles"></div>
+            <p class="muted small" id="profile-note"></p>
+            <dl class="facts" id="profile-facts"></dl>
+        </section>
+
+        <section class="card">
+            <h2>This machine, right now</h2>
+            <dl class="facts" id="hardware"></dl>
+            <div class="meter" title="GPU temperature against the profile ceiling">
+                <div class="meter-fill" id="temp-fill"></div>
+                <div class="meter-mark" id="temp-mark"></div>
+            </div>
+            <p class="muted small" id="hardware-note"></p>
+        </section>
+
+        <section class="card">
+            <h2>Governor</h2>
+            <dl class="facts" id="governor"></dl>
+            <div class="meter" title="share of the last twenty minutes spent generating">
+                <div class="meter-fill duty-fill" id="duty-fill"></div>
+                <div class="meter-mark" id="duty-mark"></div>
+            </div>
+            <p class="muted small" id="governor-reason">idle</p>
+        </section>
+
+        <section class="card">
+            <h2>Models</h2>
+            <ul class="job-list" id="installed-models"></ul>
+            <div class="workspace-row">
+                <input type="text" id="model-fetch" placeholder="another model, e.g. llama3.2:3b">
+                <button type="button" id="model-check">Check</button>
+                <button type="button" id="model-pull">Get</button>
+            </div>
+            <div class="meter" title="download progress"><div class="meter-fill" id="model-progress"></div></div>
+            <p class="muted small" id="model-note">Checking asks the registry what a model weighs, before you
+                commit to gigabytes. Getting it is a download that leaves this machine.</p>
+            <ul class="job-list" id="model-suggestions"></ul>
+        </section>
+
+        <section class="card">
+            <h2>Conversations</h2>
+            <div class="workspace-row">
+                <input type="text" id="chat-search" placeholder="search your conversations">
+            </div>
+            <ul class="chats" id="chats"></ul>
+            <div class="workspace-row">
+                <button type="button" id="chat-new">New conversation</button>
+                <button type="button" id="open-chats">Folder</button>
+            </div>
+            <p class="muted small" id="chats-note">Each one is a JSON file you can read, and they stay
+                after the window closes.</p>
+        </section>
+
+        <section class="card">
+            <h2>Jobs</h2>
+            <ul class="jobs" id="jobs"></ul>
+            <form class="job-form" id="job-form">
+                <input type="text" id="job-task" placeholder="What should it do?">
+                <div class="job-form-row">
+                    <input type="number" id="job-every" min="1" value="60" title="every N minutes">
+                    <input type="text" id="job-at" placeholder="or at 07:30">
+                    <button type="submit" id="job-add">Add</button>
+                </div>
+            </form>
+            <p class="muted small" id="jobs-note">A job waits for the machine to be idle — never beside a task
+                you are watching.</p>
+        </section>
+
+        <section class="card">
+            <h2>Point an agent here</h2>
+            <p class="muted small">
+                Anything that talks to these instead of 11434 is paced by the governor too — a
+                coding agent that never opens this window included.
+            </p>
+            <div class="endpoints">
+                <button type="button" class="endpoint" id="endpoint-ollama" title="click to copy"></button>
+                <button type="button" class="endpoint" id="endpoint-openai" title="click to copy"></button>
+            </div>
+            <p class="muted small" id="endpoint-note"></p>
+        </section>
+
+        <section class="card">
+            <h2>What the governor did</h2>
+            <ul class="log" id="log"></ul>
+        </section>
+    </aside>
+</main>
+
+<footer class="foot">
+    <span id="foot-left" class="muted small"></span>
+    <span id="foot-zoom" class="muted small"></span>
+    <span id="foot-right" class="muted small"></span>
+</footer>
+
+<script src="/js/app.js"></script>
+</body>
+</html>
